@@ -2,32 +2,48 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
-let playerCash = "0";
-let playerUsername = "กำลังรอข้อมูล...";
+// ตัวแปรเก็บข้อมูลสถิติทั้งหมด
+let currentData = {
+    username: "กำลังรอข้อมูล...",
+    cash: "0 €",
+    carsSold: "0 คัน",
+    kms: "0.0 KMs",
+    lastUpdated: "--:--:--"
+};
 
+// 1. Endpoint รับข้อมูล 3 ค่าจากเกม
 app.post('/update-cash', (req, res) => {
-    const { username, cash } = req.body;
-    playerCash = cash;
-    playerUsername = username;
-    console.log(`[ROBLOX] อัปเดตข้อมูล: ${username} -> $${cash}`);
+    const { username, cash, carsSold, kms } = req.body;
+    
+    currentData = {
+        username: username || "ไม่ระบุชื่อ",
+        cash: cash || "0 €",
+        carsSold: carsSold || "0 คัน",
+        kms: kms || "0.0 KMs",
+        lastUpdated: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    };
+    
+    console.log(`[ROBLOX] อัปเดตสำเร็จสำหรับคุณ ${username}`);
     res.send("OK");
 });
 
+// 2. Endpoint ส่งข้อมูลไปหน้าเว็บ
 app.get('/get-current-cash', (req, res) => {
-    res.json({ username: playerUsername, cash: playerCash });
+    res.json(currentData);
 });
 
+// 3. หน้าตาแดชบอร์ดแบบในรูปภาพ (Dark UI สายเกมมิ่ง)
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
         <head>
             <meta charset="UTF-8">
-            <title>Roblox Cash Dashboard</title>
+            <title>Fix It Up - Dashboard</title>
             <style>
                 body {
-                    font-family: 'Segoe UI', sans-serif;
-                    background-color: #0f111a;
+                    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                    background-color: #0b0c10;
                     color: #ffffff;
                     display: flex;
                     justify-content: center;
@@ -35,45 +51,58 @@ app.get('/', (req, res) => {
                     height: 100vh;
                     margin: 0;
                 }
-                .dashboard-card {
-                    background: linear-gradient(145deg, #151824, #1b1f32);
-                    padding: 40px;
-                    border-radius: 24px;
-                    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-                    text-align: center;
-                    min-width: 360px;
-                    border: 1px solid #282e48;
+                .dashboard-box {
+                    background-color: #141722;
+                    width: 480px;
+                    padding: 30px;
+                    border-radius: 16px;
+                    box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+                    border: 1px solid #1f2336;
                 }
-                h1 {
-                    font-size: 16px;
-                    color: #8f9cae;
-                    text-transform: uppercase;
-                    letter-spacing: 2px;
-                    margin: 0 0 10px 0;
-                }
-                .username {
-                    font-size: 20px;
-                    color: #38ef7d;
-                    font-weight: 500;
+                .user-status {
+                    display: flex;
+                    align-items: center;
+                    font-size: 22px;
+                    font-weight: bold;
+                    color: #5b86e5;
                     margin-bottom: 25px;
                 }
-                .cash-box {
-                    background-color: #0b0d14;
-                    padding: 20px;
-                    border-radius: 16px;
-                    border: 1px solid #1f2438;
+                .online-dot {
+                    width: 14px;
+                    height: 14px;
+                    background-color: #00e676;
+                    border-radius: 50%;
+                    margin-right: 12px;
+                    box-shadow: 0 0 10px #00e676;
                 }
-                .cash-amount {
-                    font-size: 56px;
-                    font-weight: 800;
-                    color: #00ff87;
-                    text-shadow: 0 0 20px rgba(0, 255, 135, 0.4);
-                    margin: 0;
+                .stat-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 18px;
+                    font-size: 16px;
                 }
-                .status {
-                    font-size: 12px;
-                    color: #525f77;
-                    margin-top: 20px;
+                .stat-label {
+                    color: #a0a5b5;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+                .stat-value {
+                    font-weight: bold;
+                    font-size: 18px;
+                }
+                .cash-style { color: #52c2ff; font-size: 20px; }
+                .car-style { color: #b388ff; }
+                .km-style { color: #00e676; }
+                
+                .footer-text {
+                    text-align: right;
+                    font-size: 11px;
+                    color: #4f5366;
+                    margin-top: 25px;
+                    border-top: 1px solid #1f2336;
+                    padding-top: 10px;
                 }
             </style>
             <script>
@@ -81,20 +110,40 @@ app.get('/', (req, res) => {
                     try {
                         const res = await fetch('/get-current-cash');
                         const data = await res.json();
-                        document.getElementById('user').innerText = data.username;
-                        document.getElementById('money').innerText = data.cash;
-                    } catch (e) {}
+                        document.getElementById('username').innerText = data.username;
+                        document.getElementById('cash').innerText = data.cash;
+                        document.getElementById('carsSold').innerText = data.carsSold;
+                        document.getElementById('kms').innerText = data.kms;
+                        document.getElementById('timestamp').innerText = data.lastUpdated;
+                    } catch(e) {}
                 }, 1500);
             </script>
         </head>
         <body>
-            <div class="dashboard-card">
-                <h1>Fix It Up - Live Status</h1>
-                <div id="user" class="username">กำลังรอผู้เล่นเข้าเกม...</div>
-                <div class="cash-box">
-                    <p id="money" class="cash-amount">$0</p>
+            <div class="dashboard-box">
+                <div class="user-status">
+                    <div class="online-dot"></div>
+                    <span id="username">กำลังโหลด...</span>
                 </div>
-                <div class="status">สถานะ: เชื่อมต่อสำเร็จ</div>
+                
+                <div class="stat-row">
+                    <div class="stat-label">💰 เงินในตัว:</div>
+                    <div id="cash" class="stat-value cash-style">กำลังรอ...</div>
+                </div>
+                
+                <div class="stat-row">
+                    <div class="stat-label">🚗 ขายรถแล้ว:</div>
+                    <div id="carsSold" class="stat-value car-style">กำลังรอ...</div>
+                </div>
+                
+                <div class="stat-row">
+                    <div class="stat-label">🏠 ระยะทางขับ:</div>
+                    <div id="kms" class="stat-value km-style">กำลังรอ...</div>
+                </div>
+                
+                <div id="time-container" class="footer-text">
+                    ข้อมูลส่งล่าสุด: <span id="timestamp">--:--:--</span>
+                </div>
             </div>
         </body>
         </html>
@@ -102,4 +151,4 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Dashboard running on port ' + PORT));
+app.listen(PORT, () => console.log('Gaming Dashboard is running!'));
