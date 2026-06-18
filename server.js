@@ -2,6 +2,7 @@ const express = require('express');
 const app = express();
 app.use(express.json());
 
+// ตัวแปรเก็บข้อมูลสถิติ
 let currentData = {
     username: "กำลังรอข้อมูล...",
     cash: "0 €",
@@ -10,33 +11,33 @@ let currentData = {
     lastUpdated: "--:--:--"
 };
 
-// จุดรับข้อมูลแบบ GET เพื่อแก้ทางตัวรันในอีมูเลเตอร์ที่โดนบล็อกพอร์ต POST
-app.get('/update-via-get', (req, res) => {
-    const { username, cash, cars, kms } = req.query;
-    
+// เปิดช่องรับข้อมูลจากสคริปต์ในเกม (รองรับทั้งแบบเก่าและแบบใหม่)
+app.post('/update-cash', (req, res) => {
+    const { username, cash, carsSold, kms } = req.body;
     currentData = {
         username: username || "ไม่ระบุชื่อ",
-        cash: cash ? decodeURIComponent(cash) : "0 €",
-        carsSold: (cars || "0") + " คัน",
-        kms: (kms || "0") + " KMs",
+        cash: cash || "0 €",
+        carsSold: carsSold || "0 คัน",
+        kms: kms || "0.0 KMs",
         lastUpdated: new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
     };
-    
-    console.log(`[ROBLOX] เจาะระบบดึงข้อมูลสำเร็จ: ${username}`);
+    console.log(`[ROBLOX] อัปเดตข้อมูลสำเร็จสำหรับ: ${username}`);
     res.send("OK");
 });
 
+// ดึงค่าข้อมูลไปโชว์ที่หน้าเว็บ
 app.get('/get-current-cash', (req, res) => {
     res.json(currentData);
 });
 
+// หน้าแดชบอร์ดดีไซน์สีดำสวยงาม
 app.get('/', (req, res) => {
     res.send(`
         <!DOCTYPE html>
         <html lang="th">
         <head>
             <meta charset="UTF-8">
-            <title>Fix It Up - Gaming Dashboard</title>
+            <title>Fix It Up - Dashboard</title>
             <style>
                 body { font-family: 'Segoe UI', sans-serif; background-color: #0b0c10; color: #ffffff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
                 .dashboard-box { background-color: #141722; width: 440px; padding: 30px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid #1f2336; }
@@ -61,7 +62,7 @@ app.get('/', (req, res) => {
                         document.getElementById('kms').innerText = data.kms;
                         document.getElementById('timestamp').innerText = data.lastUpdated;
                     } catch(e) {}
-                }, 1500);
+                }, 1000);
             </script>
         </head>
         <body>
@@ -78,4 +79,4 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Dashboard fully updated!'));
+app.listen(PORT, () => console.log('Dashboard Server is active!'));
